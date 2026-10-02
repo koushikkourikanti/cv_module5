@@ -1,0 +1,1 @@
+Set-Content requirements.txt "streamlit==1.64.0","opencv-python-headless==5.0.0.93","numpy==2.5.3","Pillow==12.3.0","openai==3.22.1","python-dotenv==1.2.4"
