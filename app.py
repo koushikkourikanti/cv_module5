@@ -16,13 +16,29 @@ from openai import OpenAI
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# You can change this later in .env with:
-# OPENAI_MODEL=gpt-5.6-luna
-OPENAI_MODEL = os.getenv(
+def get_secret(name, default=None):
+    """
+    Read configuration from Streamlit Cloud secrets first.
+    Fall back to normal environment variables for local use.
+    """
+
+    try:
+        if name in st.secrets:
+            return st.secrets[name]
+    except Exception:
+        pass
+
+    return os.getenv(name, default)
+
+
+OPENAI_API_KEY = get_secret(
+    "OPENAI_API_KEY"
+)
+
+OPENAI_MODEL = get_secret(
     "OPENAI_MODEL",
-    "gpt-5.6-luna",
+    "gpt-6-luna",
 )
 
 
