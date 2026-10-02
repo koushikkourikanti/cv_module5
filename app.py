@@ -1,6 +1,9 @@
 import base64
+import html
 import json
 import os
+import re
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -8,38 +11,6 @@ import cv2
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
-
-
-# ============================================================
-# ENVIRONMENT
-# ============================================================
-
-load_dotenv()
-
-
-def get_secret(name, default=None):
-    """
-    Read configuration from Streamlit Cloud secrets first.
-    Fall back to normal environment variables for local use.
-    """
-
-    try:
-        if name in st.secrets:
-            return st.secrets[name]
-    except Exception:
-        pass
-
-    return os.getenv(name, default)
-
-
-OPENAI_API_KEY = get_secret(
-    "OPENAI_API_KEY"
-)
-
-OPENAI_MODEL = get_secret(
-    "OPENAI_MODEL",
-    "gpt-6-luna",
-)
 
 
 # ============================================================
@@ -54,7 +25,50 @@ st.set_page_config(
 
 
 # ============================================================
-# CSS
+# LOCAL + STREAMLIT CLOUD CONFIGURATION
+# ============================================================
+
+load_dotenv()
+
+
+def get_config(name, default=None):
+    """
+    Read configuration from Streamlit Cloud Secrets first.
+
+    If the application is running locally, fall back to
+    environment variables loaded from the local .env file.
+    """
+
+    try:
+        if name in st.secrets:
+            value = st.secrets[name]
+
+            if isinstance(value, str):
+                return value.strip()
+
+            return value
+
+    except Exception:
+        pass
+
+    value = os.getenv(name, default)
+
+    if isinstance(value, str):
+        return value.strip()
+
+    return value
+
+
+OPENAI_API_KEY = get_config("OPENAI_API_KEY")
+
+OPENAI_MODEL = get_config(
+    "OPENAI_MODEL",
+    "gpt-6-luna",
+)
+
+
+# ============================================================
+# CUSTOM CSS
 # ============================================================
 
 st.markdown(
@@ -94,16 +108,15 @@ st.markdown(
 }
 
 
-/* ==========================================================
-   SIDEBAR
-========================================================== */
+/* SIDEBAR */
 
 [data-testid="stSidebar"] {
-    background: linear-gradient(
-        180deg,
-        rgba(10, 19, 38, 0.98),
-        rgba(8, 15, 30, 0.98)
-    );
+    background:
+        linear-gradient(
+            180deg,
+            rgba(10, 19, 38, 0.98),
+            rgba(8, 15, 30, 0.98)
+        );
 
     border-right:
         1px solid rgba(118, 145, 255, 0.14);
@@ -126,10 +139,8 @@ st.markdown(
 }
 
 .sidebar-card {
-
     padding: 0.95rem 1rem;
     margin-bottom: 0.8rem;
-
     border-radius: 14px;
 
     background:
@@ -140,49 +151,32 @@ st.markdown(
 }
 
 .sidebar-label {
-
     color: #7690b9;
-
     font-size: 0.68rem;
-
     text-transform: uppercase;
-
     letter-spacing: 0.12em;
-
     margin-bottom: 0.25rem;
 }
 
 .sidebar-value {
-
     color: #ffffff;
-
     font-weight: 600;
-
     font-size: 0.88rem;
 }
 
 .nav-item {
-
     padding: 0.65rem 0.75rem;
-
     border-radius: 10px;
-
-    margin: 0.2rem 0;
-
+    margin: 0.20rem 0;
     color: #aebbd0;
-
     font-size: 0.88rem;
 }
 
 
-/* ==========================================================
-   HERO
-========================================================== */
+/* HERO */
 
 .hero {
-
     position: relative;
-
     overflow: hidden;
 
     border-radius: 28px;
@@ -206,17 +200,14 @@ st.markdown(
 }
 
 .hero:before {
-
     content: "";
 
     position: absolute;
 
     width: 440px;
-
     height: 440px;
 
     right: -140px;
-
     top: -170px;
 
     background:
@@ -229,33 +220,22 @@ st.markdown(
 }
 
 .hero-kicker {
-
     color: #72a7ff;
-
     font-size: 0.75rem;
-
     letter-spacing: 0.16em;
-
     text-transform: uppercase;
-
     font-weight: 700;
-
     margin-bottom: 0.7rem;
 }
 
 .hero-title {
-
     font-size: 3.25rem;
-
     line-height: 1.02;
-
     font-weight: 850;
-
     letter-spacing: -0.045em;
 }
 
 .hero-gradient {
-
     background:
         linear-gradient(
             90deg,
@@ -265,42 +245,29 @@ st.markdown(
         );
 
     -webkit-background-clip: text;
-
     -webkit-text-fill-color: transparent;
 }
 
 .hero-subtitle {
-
     color: #8ea2c4;
-
     margin-top: 1rem;
-
     font-size: 1rem;
-
     line-height: 1.65;
-
     max-width: 800px;
 }
 
 .badge-row {
-
     display: flex;
-
     flex-wrap: wrap;
-
     gap: 0.55rem;
-
     margin-top: 1.4rem;
 }
 
 .badge {
-
     padding: 0.46rem 0.78rem;
-
     border-radius: 999px;
 
     font-size: 0.72rem;
-
     font-weight: 700;
 
     background:
@@ -313,59 +280,39 @@ st.markdown(
 }
 
 
-/* ==========================================================
-   HEADERS
-========================================================== */
+/* SECTION HEADERS */
 
 .section-header {
-
     margin-top: 2.2rem;
-
     margin-bottom: 1rem;
 }
 
 .section-index {
-
     color: #6e9bff;
-
     font-size: 0.72rem;
-
     font-weight: 700;
-
     letter-spacing: 0.14em;
-
     text-transform: uppercase;
 }
 
 .section-title {
-
     font-size: 1.65rem;
-
     font-weight: 760;
-
     letter-spacing: -0.025em;
-
     margin-top: 0.18rem;
 }
 
 .section-description {
-
     color: #7f91ad;
-
     font-size: 0.9rem;
-
     max-width: 880px;
 }
 
 
-/* ==========================================================
-   CARDS
-========================================================== */
+/* CARDS */
 
 .glass-card {
-
-    background:
-        rgba(16, 28, 53, 0.76);
+    background: rgba(16, 28, 53, 0.76);
 
     border:
         1px solid rgba(111, 143, 255, 0.13);
@@ -375,11 +322,10 @@ st.markdown(
     padding: 1.25rem;
 
     box-shadow:
-        0 16px 38px rgba(0,0,0,0.22);
+        0 16px 38px rgba(0, 0, 0, 0.22);
 }
 
 .metric-card {
-
     min-height: 116px;
 
     border-radius: 18px;
@@ -394,14 +340,13 @@ st.markdown(
         );
 
     border:
-        1px solid rgba(110,143,255,0.15);
+        1px solid rgba(110, 143, 255, 0.15);
 
     box-shadow:
-        0 14px 32px rgba(0,0,0,0.18);
+        0 14px 32px rgba(0, 0, 0, 0.18);
 }
 
 .metric-label {
-
     color: #6f83a5;
 
     font-size: 0.67rem;
@@ -416,7 +361,6 @@ st.markdown(
 }
 
 .metric-value {
-
     color: #ffffff;
 
     font-weight: 760;
@@ -425,16 +369,12 @@ st.markdown(
 }
 
 .metric-sub {
-
     color: #6582b3;
-
     font-size: 0.76rem;
-
     margin-top: 0.25rem;
 }
 
 .ai-card {
-
     background:
         linear-gradient(
             145deg,
@@ -443,7 +383,7 @@ st.markdown(
         );
 
     border:
-        1px solid rgba(95,130,255,0.14);
+        1px solid rgba(95, 130, 255, 0.14);
 
     border-radius: 18px;
 
@@ -453,7 +393,6 @@ st.markdown(
 }
 
 .ai-label {
-
     color: #71a2ff;
 
     font-size: 0.67rem;
@@ -468,63 +407,44 @@ st.markdown(
 }
 
 .ai-text {
-
     color: #cbd7ed;
-
     font-size: 0.9rem;
-
     line-height: 1.7;
-
-    white-space: pre-wrap;
 }
 
 .ai-placeholder {
-
     color: #7687a4;
-
     font-size: 0.88rem;
-
     line-height: 1.6;
 }
 
 
-/* ==========================================================
-   FRAMES
-========================================================== */
+/* FRAME CARDS */
 
 .frame-top {
-
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
 
     margin-bottom: 0.5rem;
 }
 
 .frame-number {
-
     font-size: 0.68rem;
-
     color: #9ab8ff;
-
     letter-spacing: 0.1em;
-
     font-weight: 750;
 }
 
 .timestamp {
-
     font-size: 0.67rem;
-
     color: #5ed6ff;
 
     background:
-        rgba(44,195,255,0.08);
+        rgba(44, 195, 255, 0.08);
 
     border:
-        1px solid rgba(44,195,255,0.16);
+        1px solid rgba(44, 195, 255, 0.16);
 
     padding: 0.2rem 0.45rem;
 
@@ -532,24 +452,21 @@ st.markdown(
 }
 
 
-/* ==========================================================
-   PIPELINE
-========================================================== */
+/* PIPELINE */
 
 .pipeline {
-
     display: grid;
 
     grid-template-columns:
-        minmax(130px,1fr)
+        minmax(130px, 1fr)
         auto
-        minmax(130px,1fr)
+        minmax(130px, 1fr)
         auto
-        minmax(130px,1fr)
+        minmax(130px, 1fr)
         auto
-        minmax(130px,1fr)
+        minmax(130px, 1fr)
         auto
-        minmax(130px,1fr);
+        minmax(130px, 1fr);
 
     align-items: center;
 
@@ -559,7 +476,6 @@ st.markdown(
 }
 
 .pipeline-node {
-
     border-radius: 16px;
 
     padding: 1rem 0.75rem;
@@ -569,53 +485,41 @@ st.markdown(
     background:
         linear-gradient(
             145deg,
-            rgba(15,31,61,0.96),
-            rgba(12,25,49,0.92)
+            rgba(15, 31, 61, 0.96),
+            rgba(12, 25, 49, 0.92)
         );
 
     border:
-        1px solid rgba(97,136,255,0.15);
+        1px solid rgba(97, 136, 255, 0.15);
 }
 
 .pipeline-node-title {
-
     color: #dce7ff;
-
     font-weight: 700;
-
     font-size: 0.78rem;
 }
 
 .pipeline-node-sub {
-
     color: #6980a6;
-
     font-size: 0.65rem;
-
     margin-top: 0.25rem;
 }
 
 .pipeline-arrow {
-
     text-align: center;
-
     color: #6f91ff;
-
     font-size: 1.1rem;
 }
 
 
-/* ==========================================================
-   CONTROLS
-========================================================== */
+/* CONTROLS */
 
 div[data-testid="stFileUploader"] section {
-
     background:
-        rgba(17,30,55,0.70);
+        rgba(17, 30, 55, 0.70);
 
     border:
-        1px dashed rgba(104,144,255,0.30);
+        1px dashed rgba(104, 144, 255, 0.30);
 
     border-radius: 18px;
 
@@ -623,9 +527,6 @@ div[data-testid="stFileUploader"] section {
 }
 
 .stButton > button {
-
-    width: 100%;
-
     border-radius: 12px;
 
     min-height: 46px;
@@ -642,27 +543,25 @@ div[data-testid="stFileUploader"] section {
     font-weight: 700;
 
     border:
-        1px solid rgba(150,170,255,0.22);
+        1px solid rgba(150, 170, 255, 0.22);
 
     box-shadow:
-        0 10px 24px rgba(69,82,229,0.18);
+        0 10px 24px rgba(69, 82, 229, 0.18);
 }
 
 .stButton > button:hover {
-
     border-color:
-        rgba(160,181,255,0.38);
+        rgba(160, 181, 255, 0.38);
 }
 
 div[data-testid="stTextInput"] input {
-
     background:
-        rgba(15,28,51,0.78);
+        rgba(15, 28, 51, 0.78);
 
     color: #f2f6ff;
 
     border:
-        1px solid rgba(105,137,255,0.18);
+        1px solid rgba(105, 137, 255, 0.18);
 
     border-radius: 12px;
 
@@ -670,7 +569,6 @@ div[data-testid="stTextInput"] input {
 }
 
 .question-chip {
-
     display: inline-block;
 
     margin:
@@ -684,16 +582,15 @@ div[data-testid="stTextInput"] input {
     color: #a9bce1;
 
     background:
-        rgba(96,126,220,0.055);
+        rgba(96, 126, 220, 0.055);
 
     border:
-        1px solid rgba(100,137,244,0.12);
+        1px solid rgba(100, 137, 244, 0.12);
 
     font-size: 0.73rem;
 }
 
 .answer-box {
-
     margin-top: 1rem;
 
     padding: 1.25rem;
@@ -701,35 +598,27 @@ div[data-testid="stTextInput"] input {
     border-radius: 16px;
 
     background:
-        rgba(15,31,61,0.82);
+        rgba(15, 31, 61, 0.82);
 
     border:
-        1px solid rgba(95,138,255,0.16);
+        1px solid rgba(95, 138, 255, 0.16);
 
     color: #d6e1f7;
 
     line-height: 1.65;
 }
 
-.status-good {
-
-    color: #78f0ba;
-
-    font-weight: 700;
-}
-
 .footer {
-
     text-align: center;
 
     padding-top: 2.7rem;
-
     padding-bottom: 1rem;
 
     color: #52647f;
 
     font-size: 0.76rem;
 }
+
 
 @media (max-width: 1100px) {
 
@@ -753,19 +642,64 @@ div[data-testid="stTextInput"] input {
 
 
 # ============================================================
-# PATHS
+# HELPERS
 # ============================================================
 
-OUTPUT_DIR = Path("outputs/extracted_frames")
+def safe_text(value):
+    """
+    Escape AI-generated text before inserting it into HTML.
+    """
 
-OUTPUT_DIR.mkdir(
-    parents=True,
-    exist_ok=True,
-)
+    if value is None:
+        return ""
+
+    return html.escape(str(value)).replace("\n", "<br>")
+
+
+def render_section(index_text, title, description=""):
+    st.html(
+        f"""
+<div class="section-header">
+    <div class="section-index">
+        {safe_text(index_text)}
+    </div>
+
+    <div class="section-title">
+        {safe_text(title)}
+    </div>
+
+    <div class="section-description">
+        {safe_text(description)}
+    </div>
+</div>
+"""
+    )
+
+
+def render_ai_card(label, content, placeholder=False):
+    css_class = (
+        "ai-placeholder"
+        if placeholder
+        else "ai-text"
+    )
+
+    st.html(
+        f"""
+<div class="ai-card">
+    <div class="ai-label">
+        {safe_text(label)}
+    </div>
+
+    <div class="{css_class}">
+        {safe_text(content)}
+    </div>
+</div>
+"""
+    )
 
 
 # ============================================================
-# OPENAI CLIENT
+# OPENAI
 # ============================================================
 
 def get_openai_client():
@@ -783,12 +717,11 @@ def get_openai_client():
 # ============================================================
 
 def image_to_data_url(image_path):
-    """
-    Convert a JPEG frame into a base64 data URL so that it
-    can be sent directly to a multimodal model.
-    """
 
-    with open(image_path, "rb") as image_file:
+    with open(
+        image_path,
+        "rb",
+    ) as image_file:
 
         encoded = base64.b64encode(
             image_file.read()
@@ -801,7 +734,7 @@ def image_to_data_url(image_path):
 
 
 # ============================================================
-# VIDEO FUNCTIONS
+# VIDEO PROCESSING
 # ============================================================
 
 def get_video_metadata(video_path):
@@ -847,34 +780,35 @@ def get_video_metadata(video_path):
     cap.release()
 
     return {
-
         "fps": fps,
-
         "frame_count": frame_count,
-
         "width": width,
-
         "height": height,
-
         "duration": duration,
     }
 
 
 def extract_frames(
     video_path,
+    output_dir,
     num_frames=8,
 ):
 
-    for old_file in OUTPUT_DIR.glob(
+    output_dir = Path(
+        output_dir
+    )
+
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    for old_file in output_dir.glob(
         "*.jpg"
     ):
-
         try:
-
             old_file.unlink()
-
         except OSError:
-
             pass
 
     cap = cv2.VideoCapture(
@@ -917,15 +851,12 @@ def extract_frames(
     else:
 
         indices = [
-
             int(
                 i
                 * (frame_count - 1)
                 / (num_frames - 1)
             )
-
-            for i
-            in range(num_frames)
+            for i in range(num_frames)
         ]
 
     results = []
@@ -943,12 +874,10 @@ def extract_frames(
         success, frame = cap.read()
 
         if not success:
-
             continue
 
         frame_path = (
-
-            OUTPUT_DIR
+            output_dir
             / f"frame_{i:02d}.jpg"
         )
 
@@ -998,7 +927,7 @@ def format_timestamp(seconds):
 
 
 # ============================================================
-# MULTIMODAL REQUEST
+# MULTIMODAL API REQUEST
 # ============================================================
 
 def send_frames_to_model(
@@ -1061,13 +990,11 @@ def send_frames_to_model(
         )
 
     response = client.responses.create(
-
         model=OPENAI_MODEL,
 
         input=[
             {
                 "role": "user",
-
                 "content": content,
             }
         ],
@@ -1080,30 +1007,71 @@ def send_frames_to_model(
 # VIDEO ANALYSIS
 # ============================================================
 
+def extract_json(text):
+
+    cleaned = text.strip()
+
+    cleaned = re.sub(
+        r"^```(?:json)?\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    cleaned = re.sub(
+        r"\s*```$",
+        "",
+        cleaned,
+    )
+
+    try:
+        return json.loads(cleaned)
+
+    except json.JSONDecodeError:
+        pass
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+
+    if (
+        start != -1
+        and end != -1
+        and end > start
+    ):
+
+        try:
+            return json.loads(
+                cleaned[start:end + 1]
+            )
+
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
 def analyze_video_with_llm(frames):
 
     prompt = """
 You are analyzing chronological frames sampled uniformly
 from one continuous video.
 
-These frames appear in chronological order.
+The supplied images appear in chronological order.
 
-Your job is to infer only information supported by the
-provided frames.
+Use only information supported by the supplied frames.
 
-Do not invent actions, objects, dialogue, or events that
-cannot reasonably be observed.
+Do not invent actions, objects, dialogue, audio, or events
+that are not reasonably visible.
 
-Because these are sampled frames rather than every frame
-from the original video, clearly acknowledge uncertainty
-where appropriate.
+Because these are sampled frames and not every frame from
+the video, acknowledge uncertainty when appropriate.
 
 Analyze the video for a Computer Vision feasibility study.
 
-Return ONLY valid JSON using exactly this structure:
+Return ONLY valid JSON with exactly this structure:
 
 {
-  "summary": "A concise summary of the video.",
+  "summary": "Concise video summary",
   "objects": [
     "object 1",
     "object 2"
@@ -1119,21 +1087,17 @@ Return ONLY valid JSON using exactly this structure:
   ]
 }
 
-Definitions:
-
 summary:
-A concise description of what appears to happen across
-the sampled video.
+Describe the overall video.
 
 objects:
-Important visible objects that are relevant to the actions.
+List important visible objects.
 
 actions:
-Major observable actions performed during the video.
+List the major observable actions.
 
 temporal_sequence:
-Describe the likely chronological order of major events
-based only on the supplied frames.
+Describe the likely chronological order of major events.
 
 Return JSON only.
 """
@@ -1143,45 +1107,24 @@ Return JSON only.
         prompt,
     )
 
-    cleaned = result.strip()
+    parsed = extract_json(
+        result
+    )
 
-    if cleaned.startswith("```"):
-
-        cleaned = cleaned.replace(
-            "```json",
-            "",
-            1,
-        )
-
-        cleaned = cleaned.replace(
-            "```",
-            "",
-        )
-
-        cleaned = cleaned.strip()
-
-    try:
-
-        return json.loads(
-            cleaned
-        )
-
-    except json.JSONDecodeError:
+    if parsed is None:
 
         return {
-            "summary":
-                result,
-
+            "summary": result,
             "objects": [],
-
             "actions": [],
-
             "temporal_sequence": [],
         }
 
+    return parsed
+
 
 # ============================================================
-# VIDEO QUESTION ANSWERING
+# QUESTION ANSWERING
 # ============================================================
 
 def ask_video_question(
@@ -1190,19 +1133,19 @@ def ask_video_question(
 ):
 
     prompt = f"""
-You are answering a question about one video.
+You are answering a question about one continuous video.
 
 The supplied images are chronological frames sampled
-uniformly from the same continuous video.
+uniformly from that video.
 
-Answer using only evidence visible in the supplied frames.
+Answer using only evidence visible in those frames.
 
-Important rules:
+Rules:
 
-1. Do not invent events that are not visible.
-2. Consider the chronological order of the frames.
-3. For before/after questions, use temporal ordering.
-4. If the evidence is insufficient, clearly say so.
+1. Do not invent events.
+2. Consider chronological frame order.
+3. For before-and-after questions, use temporal ordering.
+4. If evidence is insufficient, clearly say so.
 5. Keep the answer concise but explanatory.
 
 Question:
@@ -1221,29 +1164,20 @@ Question:
 # ============================================================
 
 defaults = {
-
     "frames": [],
-
     "metadata": None,
-
     "temp_video_path": None,
-
-    "last_filename": None,
-
+    "frames_dir": None,
+    "last_upload_id": None,
     "analysis": None,
-
     "last_answer": None,
-
     "feasibility_answers": {},
-
-    "evaluations": {},
 }
 
 
 for key, value in defaults.items():
 
     if key not in st.session_state:
-
         st.session_state[key] = value
 
 
@@ -1265,6 +1199,12 @@ with st.sidebar:
 """
     )
 
+    api_status = (
+        "Configured"
+        if OPENAI_API_KEY
+        else "Not configured"
+    )
+
     st.html(
         f"""
 <div class="sidebar-card">
@@ -1279,6 +1219,7 @@ with st.sidebar:
 
 </div>
 
+
 <div class="sidebar-card">
 
     <div class="sidebar-label">
@@ -1290,6 +1231,7 @@ with st.sidebar:
     </div>
 
 </div>
+
 
 <div class="sidebar-card">
 
@@ -1303,6 +1245,7 @@ with st.sidebar:
 
 </div>
 
+
 <div class="sidebar-card">
 
     <div class="sidebar-label">
@@ -1310,7 +1253,20 @@ with st.sidebar:
     </div>
 
     <div class="sidebar-value">
-        {OPENAI_MODEL}
+        {safe_text(OPENAI_MODEL)}
+    </div>
+
+</div>
+
+
+<div class="sidebar-card">
+
+    <div class="sidebar-label">
+        API Status
+    </div>
+
+    <div class="sidebar-value">
+        {safe_text(api_status)}
     </div>
 
 </div>
@@ -1399,54 +1355,41 @@ st.html(
 
 
 # ============================================================
-# API STATUS
+# API STATUS WARNING
 # ============================================================
 
 if not OPENAI_API_KEY:
 
     st.error(
         "OpenAI API key was not detected. "
-        "Add OPENAI_API_KEY to your .env file."
+        "For local use, add OPENAI_API_KEY to .env. "
+        "For Streamlit Cloud, add OPENAI_API_KEY "
+        "under Manage app -> Settings -> Secrets."
     )
 
 
 # ============================================================
-# SECTION 1 - VIDEO INPUT
+# VIDEO INPUT
 # ============================================================
 
-st.html(
-    """
-<div class="section-header">
-
-    <div class="section-index">
-        01 / VIDEO INPUT
-    </div>
-
-    <div class="section-title">
-        Upload Video
-    </div>
-
-    <div class="section-description">
-        Upload a short instructional or activity video.
-        The system will inspect its metadata and sample
-        representative frames for multimodal analysis.
-    </div>
-
-</div>
-"""
+render_section(
+    "01 / VIDEO INPUT",
+    "Upload Video",
+    (
+        "Upload a short instructional or activity video. "
+        "The system extracts metadata and representative "
+        "frames for multimodal analysis."
+    ),
 )
 
 
 uploaded_file = st.file_uploader(
-
     "Upload MP4, MOV or AVI",
-
     type=[
         "mp4",
         "mov",
         "avi",
     ],
-
     label_visibility="collapsed",
 )
 
@@ -1457,28 +1400,46 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
 
+    upload_id = (
+        uploaded_file.name,
+        uploaded_file.size,
+    )
+
     suffix = Path(
         uploaded_file.name
     ).suffix
 
+
+    # --------------------------------------------------------
+    # NEW VIDEO
+    # --------------------------------------------------------
+
     if (
-        st.session_state.temp_video_path
-        is None
-        or
-        st.session_state.last_filename
-        != uploaded_file.name
+        st.session_state.last_upload_id
+        != upload_id
     ):
 
-        # Delete previous temporary video.
-        old_path = (
+        old_video = (
             st.session_state.temp_video_path
         )
 
-        if old_path:
+        old_frames_dir = (
+            st.session_state.frames_dir
+        )
+
+        if old_video:
 
             try:
-                os.remove(old_path)
+                os.remove(old_video)
+            except OSError:
+                pass
 
+        if old_frames_dir:
+
+            try:
+                shutil.rmtree(
+                    old_frames_dir
+                )
             except OSError:
                 pass
 
@@ -1495,12 +1456,20 @@ if uploaded_file is not None:
 
         temp_file.close()
 
+        frames_dir = tempfile.mkdtemp(
+            prefix="video_llm_frames_"
+        )
+
         st.session_state.temp_video_path = (
             temp_file.name
         )
 
-        st.session_state.last_filename = (
-            uploaded_file.name
+        st.session_state.frames_dir = (
+            frames_dir
+        )
+
+        st.session_state.last_upload_id = (
+            upload_id
         )
 
         st.session_state.frames = []
@@ -1511,7 +1480,14 @@ if uploaded_file is not None:
 
         st.session_state.feasibility_answers = {}
 
-        st.session_state.evaluations = {}
+        # Clear old human evaluations.
+        for key in list(
+            st.session_state.keys()
+        ):
+            if key.startswith(
+                "evaluation_"
+            ):
+                del st.session_state[key]
 
         try:
 
@@ -1539,37 +1515,25 @@ if uploaded_file is not None:
         uploaded_file
     )
 
-
     metadata = (
         st.session_state.metadata
     )
 
 
     # ========================================================
-    # VIDEO METADATA
+    # METADATA
     # ========================================================
 
     if metadata:
 
-        st.html(
-            """
-<div class="section-header">
-
-    <div class="section-index">
-        VIDEO METADATA
-    </div>
-
-    <div class="section-title">
-        Video Information
-    </div>
-
-    <div class="section-description">
-        Technical information extracted directly from
-        the uploaded video using OpenCV.
-    </div>
-
-</div>
-"""
+        render_section(
+            "VIDEO METADATA",
+            "Video Information",
+            (
+                "Technical information extracted "
+                "directly from the uploaded video "
+                "using OpenCV."
+            ),
         )
 
 
@@ -1674,87 +1638,74 @@ if uploaded_file is not None:
         # TEMPORAL SAMPLING
         # ====================================================
 
-        st.html(
-            """
-<div class="section-header">
-
-    <div class="section-index">
-        02 / TEMPORAL SAMPLING
-    </div>
-
-    <div class="section-title">
-        Video Timeline
-    </div>
-
-    <div class="section-description">
-        Eight frames are sampled uniformly across the
-        video to provide spatial and temporal context.
-    </div>
-
-</div>
-"""
+        render_section(
+            "02 / TEMPORAL SAMPLING",
+            "Video Timeline",
+            (
+                "Eight frames are sampled uniformly "
+                "across the video to provide spatial "
+                "and temporal context."
+            ),
         )
 
 
-        analyze_clicked = st.button(
+        if st.button(
             "Analyze Video with AI",
             type="primary",
-        )
+        ):
 
-
-        if analyze_clicked:
-
-            try:
-
-                # --------------------------------------------
-                # STEP 1: EXTRACT FRAMES
-                # --------------------------------------------
-
-                with st.spinner(
-                    "Sampling video frames..."
-                ):
-
-                    st.session_state.frames = (
-                        extract_frames(
-                            st.session_state.temp_video_path,
-                            num_frames=8,
-                        )
-                    )
-
-
-                if not st.session_state.frames:
-
-                    raise RuntimeError(
-                        "No frames were extracted."
-                    )
-
-
-                # --------------------------------------------
-                # STEP 2: MULTIMODAL ANALYSIS
-                # --------------------------------------------
-
-                with st.spinner(
-                    "Video-LLM is analyzing "
-                    "objects, actions, and temporal order..."
-                ):
-
-                    st.session_state.analysis = (
-                        analyze_video_with_llm(
-                            st.session_state.frames
-                        )
-                    )
-
-
-                st.success(
-                    "Video analysis completed successfully."
-                )
-
-
-            except Exception as error:
+            if not OPENAI_API_KEY:
 
                 st.error(
-                    f"Analysis failed: {error}"
+                    "OPENAI_API_KEY is not configured."
                 )
+
+            else:
+
+                try:
+
+                    with st.spinner(
+                        "Sampling video frames..."
+                    ):
+
+                        st.session_state.frames = (
+                            extract_frames(
+                                st.session_state.temp_video_path,
+                                st.session_state.frames_dir,
+                                num_frames=8,
+                            )
+                        )
+
+
+                    if not st.session_state.frames:
+
+                        raise RuntimeError(
+                            "No video frames were extracted."
+                        )
+
+
+                    with st.spinner(
+                        "Video-LLM is analyzing "
+                        "objects, actions, and temporal order..."
+                    ):
+
+                        st.session_state.analysis = (
+                            analyze_video_with_llm(
+                                st.session_state.frames
+                            )
+                        )
+
+
+                    st.success(
+                        "Video analysis completed successfully."
+                    )
+
+
+                except Exception as error:
+
+                    st.error(
+                        f"Analysis failed: {error}"
+                    )
 
 
         frames = (
@@ -1786,12 +1737,10 @@ if uploaded_file is not None:
                     column,
                     frame_info,
                 ) in enumerate(
-
                     zip(
                         columns,
                         row_frames,
                     ),
-
                     start=row_start + 1,
                 ):
 
@@ -1823,7 +1772,7 @@ if uploaded_file is not None:
 
                         st.image(
                             frame_info["path"],
-                            use_container_width=True,
+                            width="stretch",
                         )
 
 
@@ -1831,25 +1780,14 @@ if uploaded_file is not None:
         # VIDEO INTELLIGENCE
         # ====================================================
 
-        st.html(
-            """
-<div class="section-header">
-
-    <div class="section-index">
-        03 / VIDEO INTELLIGENCE
-    </div>
-
-    <div class="section-title">
-        Multimodal Analysis
-    </div>
-
-    <div class="section-description">
-        AI-generated semantic and temporal understanding
-        derived from the sampled video frames.
-    </div>
-
-</div>
-"""
+        render_section(
+            "03 / VIDEO INTELLIGENCE",
+            "Multimodal Analysis",
+            (
+                "AI-generated semantic and temporal "
+                "understanding derived from the sampled "
+                "video frames."
+            ),
         )
 
 
@@ -1860,14 +1798,29 @@ if uploaded_file is not None:
 
         if analysis:
 
+            objects = analysis.get(
+                "objects",
+                [],
+            )
+
+            actions = analysis.get(
+                "actions",
+                [],
+            )
+
+            timeline = analysis.get(
+                "temporal_sequence",
+                [],
+            )
+
+
             objects_text = (
                 ", ".join(
-                    analysis.get(
-                        "objects",
-                        [],
-                    )
+                    str(item)
+                    for item in objects
                 )
-                or
+                if objects
+                else
                 "No reliable objects identified."
             )
 
@@ -1875,12 +1828,10 @@ if uploaded_file is not None:
             actions_text = (
                 "\n".join(
                     f"- {item}"
-                    for item in analysis.get(
-                        "actions",
-                        [],
-                    )
+                    for item in actions
                 )
-                or
+                if actions
+                else
                 "No reliable actions identified."
             )
 
@@ -1889,14 +1840,12 @@ if uploaded_file is not None:
                 "\n".join(
                     f"{index}. {item}"
                     for index, item in enumerate(
-                        analysis.get(
-                            "temporal_sequence",
-                            [],
-                        ),
+                        timeline,
                         start=1,
                     )
                 )
-                or
+                if timeline
+                else
                 "Temporal sequence unavailable."
             )
 
@@ -1906,39 +1855,20 @@ if uploaded_file is not None:
 
             with ai1:
 
-                st.html(
-                    f"""
-<div class="ai-card">
-
-    <div class="ai-label">
-        Video Summary
-    </div>
-
-    <div class="ai-text">
-        {analysis.get("summary", "No summary available.")}
-    </div>
-
-</div>
-"""
+                render_ai_card(
+                    "Video Summary",
+                    analysis.get(
+                        "summary",
+                        "No summary available.",
+                    ),
                 )
 
 
             with ai2:
 
-                st.html(
-                    f"""
-<div class="ai-card">
-
-    <div class="ai-label">
-        Detected Objects
-    </div>
-
-    <div class="ai-text">
-        {objects_text}
-    </div>
-
-</div>
-"""
+                render_ai_card(
+                    "Detected Objects",
+                    objects_text,
                 )
 
 
@@ -1950,41 +1880,17 @@ if uploaded_file is not None:
 
             with ai3:
 
-                st.markdown(
-                    f"""
-<div class="ai-card">
-
-<div class="ai-label">
-Major Actions
-</div>
-
-<div class="ai-text">
-{actions_text}
-</div>
-
-</div>
-""",
-                    unsafe_allow_html=True,
+                render_ai_card(
+                    "Major Actions",
+                    actions_text,
                 )
 
 
             with ai4:
 
-                st.markdown(
-                    f"""
-<div class="ai-card">
-
-<div class="ai-label">
-Temporal Sequence
-</div>
-
-<div class="ai-text">
-{temporal_text}
-</div>
-
-</div>
-""",
-                    unsafe_allow_html=True,
+                render_ai_card(
+                    "Temporal Sequence",
+                    temporal_text,
                 )
 
 
@@ -1995,39 +1901,25 @@ Temporal Sequence
 
             with ai1:
 
-                st.html(
-                    """
-<div class="ai-card">
-
-    <div class="ai-label">
-        Video Summary
-    </div>
-
-    <div class="ai-placeholder">
-        Run AI analysis to generate a video summary.
-    </div>
-
-</div>
-"""
+                render_ai_card(
+                    "Video Summary",
+                    (
+                        "Run AI analysis to generate "
+                        "a video summary."
+                    ),
+                    placeholder=True,
                 )
 
 
             with ai2:
 
-                st.html(
-                    """
-<div class="ai-card">
-
-    <div class="ai-label">
-        Detected Objects
-    </div>
-
-    <div class="ai-placeholder">
-        Run AI analysis to identify important objects.
-    </div>
-
-</div>
-"""
+                render_ai_card(
+                    "Detected Objects",
+                    (
+                        "Run AI analysis to identify "
+                        "important objects."
+                    ),
+                    placeholder=True,
                 )
 
 
@@ -2039,39 +1931,25 @@ Temporal Sequence
 
             with ai3:
 
-                st.html(
-                    """
-<div class="ai-card">
-
-    <div class="ai-label">
-        Major Actions
-    </div>
-
-    <div class="ai-placeholder">
-        Run AI analysis to identify major actions.
-    </div>
-
-</div>
-"""
+                render_ai_card(
+                    "Major Actions",
+                    (
+                        "Run AI analysis to identify "
+                        "major actions."
+                    ),
+                    placeholder=True,
                 )
 
 
             with ai4:
 
-                st.html(
-                    """
-<div class="ai-card">
-
-    <div class="ai-label">
-        Temporal Sequence
-    </div>
-
-    <div class="ai-placeholder">
-        Run AI analysis to infer chronological events.
-    </div>
-
-</div>
-"""
+                render_ai_card(
+                    "Temporal Sequence",
+                    (
+                        "Run AI analysis to infer "
+                        "chronological events."
+                    ),
+                    placeholder=True,
                 )
 
 
@@ -2079,37 +1957,22 @@ Temporal Sequence
         # ASK VIDEO
         # ====================================================
 
-        st.html(
-            """
-<div class="section-header">
-
-    <div class="section-index">
-        04 / ASK VIDEO
-    </div>
-
-    <div class="section-title">
-        Ask the Video-LLM
-    </div>
-
-    <div class="section-description">
-        Ask questions about objects, actions, events,
-        and before-after relationships in the video.
-    </div>
-
-</div>
-"""
+        render_section(
+            "04 / ASK VIDEO",
+            "Ask the Video-LLM",
+            (
+                "Ask questions about objects, actions, "
+                "events, and before-after relationships "
+                "in the uploaded video."
+            ),
         )
 
 
         question = st.text_input(
-
             "Question",
-
             placeholder=(
-                "What happened after the person "
-                "opened the notebook?"
+                "What happened after the laptop was opened?"
             ),
-
             label_visibility="collapsed",
         )
 
@@ -2118,7 +1981,13 @@ Temporal Sequence
             "Ask Video-LLM"
         ):
 
-            if not frames:
+            if not OPENAI_API_KEY:
+
+                st.error(
+                    "OPENAI_API_KEY is not configured."
+                )
+
+            elif not frames:
 
                 st.warning(
                     "Analyze the video first."
@@ -2155,6 +2024,10 @@ Temporal Sequence
 
         if st.session_state.last_answer:
 
+            answer = safe_text(
+                st.session_state.last_answer
+            )
+
             st.html(
                 f"""
 <div class="answer-box">
@@ -2163,7 +2036,7 @@ Temporal Sequence
         Video-LLM Response
     </div>
 
-    {st.session_state.last_answer}
+    {answer}
 
 </div>
 """
@@ -2187,7 +2060,7 @@ Temporal Sequence
     </span>
 
     <span class="question-chip">
-        What happened before the calculator was used?
+        What happened before the tablet was placed on the desk?
     </span>
 
     <span class="question-chip">
@@ -2200,23 +2073,18 @@ Temporal Sequence
 
 
         # ====================================================
-        # SYSTEM PIPELINE
+        # PIPELINE
         # ====================================================
+
+        render_section(
+            "SYSTEM ARCHITECTURE",
+            "Video Intelligence Pipeline",
+            "",
+        )
+
 
         st.html(
             """
-<div class="section-header">
-
-    <div class="section-index">
-        SYSTEM ARCHITECTURE
-    </div>
-
-    <div class="section-title">
-        Video Intelligence Pipeline
-    </div>
-
-</div>
-
 <div class="pipeline">
 
     <div class="pipeline-node">
@@ -2231,9 +2099,11 @@ Temporal Sequence
 
     </div>
 
+
     <div class="pipeline-arrow">
         &gt;
     </div>
+
 
     <div class="pipeline-node">
 
@@ -2247,9 +2117,11 @@ Temporal Sequence
 
     </div>
 
+
     <div class="pipeline-arrow">
         &gt;
     </div>
+
 
     <div class="pipeline-node">
 
@@ -2263,9 +2135,11 @@ Temporal Sequence
 
     </div>
 
+
     <div class="pipeline-arrow">
         &gt;
     </div>
+
 
     <div class="pipeline-node">
 
@@ -2279,9 +2153,11 @@ Temporal Sequence
 
     </div>
 
+
     <div class="pipeline-arrow">
         &gt;
     </div>
+
 
     <div class="pipeline-node">
 
@@ -2304,26 +2180,14 @@ Temporal Sequence
         # FEASIBILITY TEST
         # ====================================================
 
-        st.html(
-            """
-<div class="section-header">
-
-    <div class="section-index">
-        05 / FEASIBILITY TEST
-    </div>
-
-    <div class="section-title">
-        Prototype Evaluation
-    </div>
-
-    <div class="section-description">
-        Run five standardized questions and manually
-        evaluate the generated answers against the
-        actual contents of your video.
-    </div>
-
-</div>
-"""
+        render_section(
+            "05 / FEASIBILITY TEST",
+            "Prototype Evaluation",
+            (
+                "Run five standardized questions and "
+                "manually evaluate each generated answer "
+                "against the actual contents of the video."
+            ),
         )
 
 
@@ -2331,32 +2195,42 @@ Temporal Sequence
 
             (
                 "Object Recognition",
-                "What important objects are visible "
-                "in the video?"
+                (
+                    "What important objects are visible "
+                    "in the video?"
+                ),
             ),
 
             (
                 "Action Recognition",
-                "What are the major actions performed "
-                "in the video?"
+                (
+                    "What are the major actions performed "
+                    "in the video?"
+                ),
             ),
 
             (
                 "Temporal Order",
-                "Describe the main actions in "
-                "chronological order."
+                (
+                    "Describe the main actions in "
+                    "chronological order."
+                ),
             ),
 
             (
                 "Before/After Reasoning",
-                "Identify one meaningful before-and-after "
-                "relationship visible in the video."
+                (
+                    "Identify one meaningful before-and-after "
+                    "relationship visible in the video."
+                ),
             ),
 
             (
                 "Summarization",
-                "Summarize the entire video in "
-                "one sentence."
+                (
+                    "Summarize the entire video "
+                    "in one sentence."
+                ),
             ),
         ]
 
@@ -2365,7 +2239,13 @@ Temporal Sequence
             "Run 5-Question Feasibility Test"
         ):
 
-            if not frames:
+            if not OPENAI_API_KEY:
+
+                st.error(
+                    "OPENAI_API_KEY is not configured."
+                )
+
+            elif not frames:
 
                 st.warning(
                     "Analyze the video first."
@@ -2376,6 +2256,7 @@ Temporal Sequence
                 new_answers = {}
 
                 progress = st.progress(0)
+
 
                 try:
 
@@ -2419,9 +2300,19 @@ Temporal Sequence
                         new_answers
                     )
 
+
+                    for key in list(
+                        st.session_state.keys()
+                    ):
+                        if key.startswith(
+                            "evaluation_"
+                        ):
+                            del st.session_state[key]
+
+
                     st.success(
                         "Feasibility questions completed. "
-                        "Now evaluate each response."
+                        "Now manually evaluate each response."
                     )
 
 
@@ -2441,6 +2332,12 @@ Temporal Sequence
         if feasibility_answers:
 
             evaluation_scores = {}
+
+            score_map = {
+                "Correct": 1.0,
+                "Partially Correct": 0.5,
+                "Incorrect": 0.0,
+            }
 
 
             for index, (
@@ -2471,90 +2368,72 @@ Temporal Sequence
 
 
                     evaluation = st.radio(
-
                         "Human Evaluation",
-
                         [
                             "Correct",
                             "Partially Correct",
                             "Incorrect",
                         ],
-
-                        key=f"evaluation_{category}",
-
+                        index=None,
+                        key=(
+                            f"evaluation_{category}"
+                        ),
                         horizontal=True,
                     )
 
 
-                    score_map = {
+                    if evaluation is not None:
 
-                        "Correct": 1.0,
-
-                        "Partially Correct": 0.5,
-
-                        "Incorrect": 0.0,
-                    }
-
-
-                    evaluation_scores[
-                        category
-                    ] = score_map[
-                        evaluation
-                    ]
+                        evaluation_scores[
+                            category
+                        ] = score_map[
+                            evaluation
+                        ]
 
 
-            total_score = sum(
-                evaluation_scores.values()
-            )
+            # ------------------------------------------------
+            # SCORE ONLY AFTER ALL FIVE HAVE BEEN EVALUATED
+            # ------------------------------------------------
+
+            if (
+                len(evaluation_scores)
+                == len(feasibility_answers)
+            ):
+
+                total_score = sum(
+                    evaluation_scores.values()
+                )
+
+                max_score = len(
+                    feasibility_answers
+                )
+
+                percentage = (
+                    total_score
+                    / max_score
+                    * 100
+                )
 
 
-            max_score = len(
-                evaluation_scores
-            )
+                render_section(
+                    "EVALUATION RESULT",
+                    "Feasibility Score",
+                    (
+                        "Final score based on human "
+                        "evaluation of all five responses."
+                    ),
+                )
 
 
-            percentage = (
-
-                total_score
-                / max_score
-                * 100
-
-                if max_score
-                else 0
-            )
+                score1, score2, score3 = (
+                    st.columns(3)
+                )
 
 
-            st.session_state.evaluations = (
-                evaluation_scores
-            )
+                with score1:
 
-
-            st.html(
-                """
-<div class="section-header">
-
-    <div class="section-index">
-        EVALUATION RESULT
-    </div>
-
-    <div class="section-title">
-        Feasibility Score
-    </div>
-
-</div>
-"""
-            )
-
-
-            score1, score2, score3 = (
-                st.columns(3)
-            )
-
-
-            with score1:
-
-                st.html(
-                    f"""
+                    st.html(
+                        f"""
 <div class="metric-card">
 
     <div class="metric-label">
@@ -2571,13 +2450,13 @@ Temporal Sequence
 
 </div>
 """
-                )
+                    )
 
 
-            with score2:
+                with score2:
 
-                st.html(
-                    f"""
+                    st.html(
+                        f"""
 <div class="metric-card">
 
     <div class="metric-label">
@@ -2594,13 +2473,13 @@ Temporal Sequence
 
 </div>
 """
-                )
+                    )
 
 
-            with score3:
+                with score3:
 
-                st.html(
-                    f"""
+                    st.html(
+                        f"""
 <div class="metric-card">
 
     <div class="metric-label">
@@ -2608,7 +2487,7 @@ Temporal Sequence
     </div>
 
     <div class="metric-value">
-        {OPENAI_MODEL}
+        {safe_text(OPENAI_MODEL)}
     </div>
 
     <div class="metric-sub">
@@ -2617,173 +2496,227 @@ Temporal Sequence
 
 </div>
 """
-                )
+                    )
 
 
-            # =================================================
-            # EXPORT RESULTS
-            # =================================================
+                # ============================================
+                # DOWNLOADABLE REPORT
+                # ============================================
 
-            report_lines = [
+                report_lines = [
 
-                "Video-LLM Classroom Assistant",
+                    "Video-LLM Classroom Assistant",
 
-                "CVPR 2025 Video-LLM "
-                "Challenge Feasibility Test",
-
-                "",
-
-                "VIDEO METADATA",
-
-                f"Filename: "
-                f"{uploaded_file.name}",
-
-                f"Duration: "
-                f"{metadata['duration']:.2f} seconds",
-
-                f"FPS: "
-                f"{metadata['fps']:.2f}",
-
-                f"Resolution: "
-                f"{metadata['width']} x "
-                f"{metadata['height']}",
-
-                f"Frames sampled: "
-                f"{len(frames)}",
-
-                f"Model: "
-                f"{OPENAI_MODEL}",
-
-                "",
-            ]
-
-
-            if analysis:
-
-                report_lines.extend(
-                    [
-                        "VIDEO SUMMARY",
-
-                        analysis.get(
-                            "summary",
-                            "",
-                        ),
-
-                        "",
-
-                        "DETECTED OBJECTS",
-
-                        ", ".join(
-                            analysis.get(
-                                "objects",
-                                [],
-                            )
-                        ),
-
-                        "",
-
-                        "MAJOR ACTIONS",
-
-                        "\n".join(
-                            analysis.get(
-                                "actions",
-                                [],
-                            )
-                        ),
-
-                        "",
-
-                        "TEMPORAL SEQUENCE",
-
-                        "\n".join(
-                            analysis.get(
-                                "temporal_sequence",
-                                [],
-                            )
-                        ),
-
-                        "",
-                    ]
-                )
-
-
-            report_lines.append(
-                "FEASIBILITY TEST"
-            )
-
-            report_lines.append("")
-
-
-            for category, data in (
-                feasibility_answers.items()
-            ):
-
-                report_lines.extend(
-                    [
-                        f"Category: "
-                        f"{category}",
-
-                        f"Question: "
-                        f"{data['question']}",
-
-                        f"Model Response: "
-                        f"{data['answer']}",
-
-                        f"Human Score: "
-                        f"{evaluation_scores[category]}",
-
-                        "",
-                    ]
-                )
-
-
-            report_lines.extend(
-                [
-                    f"FINAL SCORE: "
-                    f"{total_score:.1f} / "
-                    f"{max_score}",
-
-                    f"FEASIBILITY: "
-                    f"{percentage:.0f}%",
+                    (
+                        "CVPR 2025 Video-LLM "
+                        "Challenge Feasibility Test"
+                    ),
 
                     "",
 
-                    "CONCLUSION",
+                    "VIDEO METADATA",
 
                     (
-                        "The prototype demonstrates "
-                        "the feasibility of using "
-                        "multimodal LLMs with sampled "
-                        "video frames for visual "
-                        "understanding, temporal "
-                        "reasoning, summarization, "
-                        "and natural-language "
-                        "question answering."
+                        f"Filename: "
+                        f"{uploaded_file.name}"
                     ),
+
+                    (
+                        f"Duration: "
+                        f"{metadata['duration']:.2f} seconds"
+                    ),
+
+                    (
+                        f"FPS: "
+                        f"{metadata['fps']:.2f}"
+                    ),
+
+                    (
+                        f"Resolution: "
+                        f"{metadata['width']} x "
+                        f"{metadata['height']}"
+                    ),
+
+                    (
+                        f"Frames sampled: "
+                        f"{len(frames)}"
+                    ),
+
+                    (
+                        f"Model: "
+                        f"{OPENAI_MODEL}"
+                    ),
+
+                    "",
                 ]
-            )
 
 
-            report_text = "\n".join(
-                report_lines
-            )
+                if analysis:
+
+                    report_lines.extend(
+                        [
+                            "VIDEO SUMMARY",
+
+                            analysis.get(
+                                "summary",
+                                "",
+                            ),
+
+                            "",
+
+                            "DETECTED OBJECTS",
+
+                            ", ".join(
+                                str(item)
+                                for item in analysis.get(
+                                    "objects",
+                                    [],
+                                )
+                            ),
+
+                            "",
+
+                            "MAJOR ACTIONS",
+
+                            "\n".join(
+                                str(item)
+                                for item in analysis.get(
+                                    "actions",
+                                    [],
+                                )
+                            ),
+
+                            "",
+
+                            "TEMPORAL SEQUENCE",
+
+                            "\n".join(
+                                str(item)
+                                for item in analysis.get(
+                                    "temporal_sequence",
+                                    [],
+                                )
+                            ),
+
+                            "",
+                        ]
+                    )
 
 
-            st.download_button(
+                report_lines.extend(
+                    [
+                        "FEASIBILITY TEST",
+                        "",
+                    ]
+                )
 
-                label=(
-                    "Download Experiment Results"
-                ),
 
-                data=report_text,
+                for category, data in (
+                    feasibility_answers.items()
+                ):
 
-                file_name=(
-                    "video_llm_"
-                    "feasibility_results.txt"
-                ),
+                    selected_evaluation = (
+                        st.session_state.get(
+                            f"evaluation_{category}"
+                        )
+                    )
 
-                mime="text/plain",
-            )
+                    report_lines.extend(
+                        [
+                            (
+                                f"Category: "
+                                f"{category}"
+                            ),
+
+                            (
+                                f"Question: "
+                                f"{data['question']}"
+                            ),
+
+                            (
+                                f"Model Response: "
+                                f"{data['answer']}"
+                            ),
+
+                            (
+                                f"Human Evaluation: "
+                                f"{selected_evaluation}"
+                            ),
+
+                            (
+                                f"Human Score: "
+                                f"{evaluation_scores[category]}"
+                            ),
+
+                            "",
+                        ]
+                    )
+
+
+                report_lines.extend(
+                    [
+                        (
+                            f"FINAL SCORE: "
+                            f"{total_score:.1f} / "
+                            f"{max_score}"
+                        ),
+
+                        (
+                            f"FEASIBILITY: "
+                            f"{percentage:.0f}%"
+                        ),
+
+                        "",
+
+                        "CONCLUSION",
+
+                        (
+                            "The prototype demonstrates "
+                            "the feasibility of using "
+                            "multimodal LLMs with sampled "
+                            "video frames for visual "
+                            "understanding, temporal "
+                            "reasoning, summarization, "
+                            "and natural-language "
+                            "question answering."
+                        ),
+                    ]
+                )
+
+
+                report_text = "\n".join(
+                    report_lines
+                )
+
+
+                st.download_button(
+                    label=(
+                        "Download Experiment Results"
+                    ),
+
+                    data=report_text,
+
+                    file_name=(
+                        "video_llm_"
+                        "feasibility_results.txt"
+                    ),
+
+                    mime="text/plain",
+                )
+
+
+            else:
+
+                remaining = (
+                    len(feasibility_answers)
+                    - len(evaluation_scores)
+                )
+
+                st.info(
+                    f"Evaluate all five responses "
+                    f"to calculate the final score. "
+                    f"{remaining} evaluation(s) remaining."
+                )
 
 
 else:
